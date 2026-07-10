@@ -1,0 +1,10 @@
+spring:
+  main:
+    web-application-type: none
+
+  application:
+    name: Client1
+
+m321:
+  websocket:
+    url: ws://localhost:8081/ws
