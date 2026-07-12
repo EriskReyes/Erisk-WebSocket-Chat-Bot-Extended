@@ -1,351 +1,608 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-  <meta charset="UTF-8" /> <!-- UTF-8 encoding for all characters -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <!-- responsive viewport -->
-  <title>Erisk Chat Bot</title>
+  <meta charset="UTF-8"> <!-- codificación UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- viewport responsive -->
+  <title>// RIKROIG CHAT</title> <!-- título en el lenguaje visual brutalist -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"> <!-- preconexión a Google Fonts -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin> <!-- preconexión al CDN de fuentes -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet"> <!-- las dos fuentes del estilo: mono + display -->
   <style>
-    /* ── Reset & base ──────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; } /* universal box model reset */
-    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; height: 100vh; overflow: hidden; } /* dark base theme */
+    * { margin: 0; padding: 0; box-sizing: border-box; } /* reset universal */
 
-    /* ── Login screen ──────────────────────────────────── */
-    #login-screen { height: 100vh; display: flex; align-items: center; justify-content: center; } /* full-page centered layout */
-    .login-box { background: #16213e; border: 1px solid #0f3460; border-radius: 14px; padding: 2.5rem 2rem; width: 340px; text-align: center; } /* card container */
-    .login-box h1 { font-size: 1.9rem; color: #e94560; margin-bottom: 0.35rem; letter-spacing: -0.5px; } /* app title */
-    .login-box p { color: #666; font-size: 0.85rem; margin-bottom: 1.75rem; } /* subtitle */
-    .login-box input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #0f3460; border-radius: 8px; background: #0d1b2a; color: #e0e0e0; font-size: 0.95rem; outline: none; transition: border-color 0.2s; } /* name input field */
-    .login-box input:focus { border-color: #e94560; } /* highlight on focus */
-    .login-box button { width: 100%; margin-top: 0.85rem; padding: 0.75rem; background: #e94560; border: none; border-radius: 8px; color: #fff; font-size: 0.95rem; cursor: pointer; transition: opacity 0.2s; } /* connect button */
-    .login-box button:hover { opacity: 0.85; } /* hover dimming */
+    :root {
+      --ink: #0a0a0a;            /* negro tinta — fondo principal */
+      --paper: #f5f0e8;          /* crema papel — el "blanco" del estilo */
+      --paper-40: rgba(245, 240, 232, 0.4);  /* crema al 40% — meta y labels */
+      --paper-15: rgba(245, 240, 232, 0.15); /* crema al 15% — bordes */
+      --ok: #4caf50;             /* verde — conectado */
+      --warn: #ffb000;           /* ámbar — reconectando */
+      --err: #ff3b30;            /* rojo — desconectado */
+    }
 
-    /* ── Chat screen ───────────────────────────────────── */
-    #chat-screen { display: none; height: 100vh; flex-direction: row; } /* hidden by default, shows as flex row */
-    #chat-screen.active { display: flex; } /* visible state */
+    body {
+      font-family: 'JetBrains Mono', monospace; /* mono como base de todo */
+      background: var(--ink);                    /* fondo negro tinta */
+      color: var(--paper);                       /* texto crema */
+      overflow: hidden;                          /* sin scroll de página */
+      height: 100vh;
+      position: relative;
+    }
 
-    /* ── Sidebar ────────────────────────────────────────── */
-    #sidebar { width: 255px; min-width: 255px; background: #16213e; border-right: 1px solid #0f3460; display: flex; flex-direction: column; padding: 1.25rem 1rem; gap: 1rem; } /* left panel */
-    #sidebar-title { color: #e94560; font-size: 1.05rem; font-weight: 700; } /* app name in sidebar */
-    #status-bar { background: #0d1b2a; border: 1px solid #0f3460; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.82rem; display: flex; align-items: center; gap: 0.5rem; } /* connection status card */
-    #status-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; transition: background 0.3s; } /* colored indicator dot */
-    #status-dot.connected { background: #4caf50; } /* green = connected */
-    #status-dot.connecting { background: #ff9800; } /* orange = reconnecting */
-    #status-dot.disconnected { background: #e94560; } /* red = disconnected */
-    #status-text { color: #aaa; } /* status label */
+    /* ── Fondo: rejilla + ruido (idénticos al diseño original) ─────────── */
+    .bg-grid {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-image:
+              linear-gradient(rgba(245, 240, 232, 0.03) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(245, 240, 232, 0.03) 1px, transparent 1px); /* rejilla de 40px apenas visible */
+      background-size: 40px 40px;
+      pointer-events: none; /* no bloquea clics */
+    }
 
-    /* ── Command reference panel ─────────────────────────── */
-    #commands-panel { flex: 1; overflow-y: auto; } /* scrollable command list */
-    #commands-title { color: #555; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.6rem; } /* section label */
-    .cmd-card { background: #0d1b2a; border: 1px solid #0f3460; border-radius: 7px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; cursor: pointer; transition: border-color 0.2s, background 0.2s; } /* clickable command card */
-    .cmd-card:hover { background: #152032; border-color: #e94560; } /* hover highlight */
-    .cmd-card code { display: block; color: #e94560; font-size: 0.82rem; margin-bottom: 3px; } /* command syntax */
-    .cmd-card span { color: #777; font-size: 0.78rem; line-height: 1.35; } /* command description */
+    .noise-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"); /* grano de película como SVG inline */
+      pointer-events: none;
+      z-index: 100;
+      mix-blend-mode: overlay; /* el ruido se funde con lo que hay debajo */
+    }
 
-    /* ── Main chat column ────────────────────────────────── */
-    #main-chat { flex: 1; display: flex; flex-direction: column; min-width: 0; } /* grows to fill remaining width */
+    /* ── Info de esquinas (visible en el login) ─────────────────────────── */
+    .corner-info {
+      position: absolute; font-size: 11px; color: var(--paper-40);
+      letter-spacing: 2px; font-weight: 500; z-index: 5;
+    }
+    .corner-info.tl { top: 30px; left: 30px; }             /* arriba izquierda */
+    .corner-info.tr { top: 30px; right: 30px; text-align: right; }   /* arriba derecha */
+    .corner-info.bl { bottom: 30px; left: 30px; }          /* abajo izquierda — coordenadas de Zürich */
+    .corner-info.br { bottom: 30px; right: 30px; text-align: right; } /* abajo derecha — reloj vivo */
 
-    /* ── Chat header ────────────────────────────────────── */
-    #chat-header { background: #16213e; border-bottom: 1px solid #0f3460; padding: 0.8rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; } /* top bar */
-    #chat-header h2 { font-size: 0.95rem; font-weight: 600; } /* room name */
-    #username-display { color: #e94560; font-size: 0.82rem; margin-left: auto; } /* current user badge */
+    /* ══ PANTALLA DE LOGIN (panel dividido del diseño original) ═════════ */
+    #login-scene {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center; /* contenedor centrado */
+    }
 
-    /* ── Message list ───────────────────────────────────── */
-    #messages { flex: 1; overflow-y: auto; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 0.55rem; } /* scrollable message area */
-    .msg { max-width: 72%; padding: 0.55rem 0.85rem; border-radius: 12px; font-size: 0.88rem; line-height: 1.45; word-break: break-word; } /* base bubble style */
-    .msg-header { font-size: 0.7rem; margin-bottom: 3px; font-weight: 600; } /* sender name above bubble */
-    .msg.incoming { align-self: flex-start; background: #16213e; border: 1px solid #0f3460; } /* messages from others */
-    .msg.incoming .msg-header { color: #e94560; } /* sender name in red */
-    .msg.outgoing { align-self: flex-end; background: #0f3460; } /* messages I sent */
-    .msg.outgoing .msg-header { color: #4caf50; text-align: right; } /* my name in green */
-    .msg.system { align-self: center; background: transparent; color: #555; font-size: 0.77rem; font-style: italic; padding: 0.2rem 0; max-width: 90%; text-align: center; } /* system notifications */
-    .msg.server-info { align-self: flex-start; background: #0d1f0d; border: 1px solid #1a3d1a; max-width: 85%; } /* server command response */
-    .msg.server-info .msg-header { color: #4caf50; } /* green label for server responses */
-    .msg.server-info pre { font-family: 'Consolas', 'Courier New', monospace; white-space: pre-wrap; font-size: 0.82rem; color: #88cc88; } /* monospace server output */
+    .terminal-container {
+      position: relative; z-index: 10;
+      max-width: 720px; width: 90%;
+      background: var(--ink);
+      border: 1px solid var(--paper-15); /* borde fino y duro, sin redondear */
+      display: grid; grid-template-columns: 1fr 1fr; /* dos paneles: crema | negro */
+      min-height: 480px;
+    }
 
-    /* ── Input bar ──────────────────────────────────────── */
-    #input-area { padding: 0.85rem 1.25rem; border-top: 1px solid #0f3460; background: #16213e; display: flex; gap: 0.5rem; } /* bottom input row */
-    #message-input { flex: 1; padding: 0.65rem 1rem; border: 1px solid #0f3460; border-radius: 8px; background: #0d1b2a; color: #e0e0e0; font-size: 0.9rem; outline: none; transition: border-color 0.2s; } /* text field */
-    #message-input:focus { border-color: #e94560; } /* focus highlight */
-    #message-input:disabled { opacity: 0.4; cursor: not-allowed; } /* greyed out when disconnected */
-    #send-btn { padding: 0.65rem 1.15rem; background: #e94560; border: none; border-radius: 8px; color: #fff; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s; white-space: nowrap; } /* send button */
-    #send-btn:hover:not(:disabled) { opacity: 0.85; } /* hover effect when enabled */
-    #send-btn:disabled { opacity: 0.35; cursor: not-allowed; } /* greyed out when disconnected */
+    .left-panel {
+      padding: 50px 40px;
+      border-right: 1px solid var(--paper-15);
+      display: flex; flex-direction: column; justify-content: space-between;
+      background: var(--paper); color: var(--ink); /* panel invertido: crema con tinta */
+      position: relative; overflow: hidden;
+    }
+    .left-panel::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 100%; height: 4px; background: var(--ink); /* franja negra superior */
+    }
 
-    /* ── Scrollbar ──────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 4px; } /* thin scrollbar */
-    ::-webkit-scrollbar-track { background: transparent; } /* invisible track */
-    ::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 4px; } /* dark handle */
+    .brand {
+      font-family: 'Space Grotesk', sans-serif; /* display para el nombre grande */
+      font-size: 56px; font-weight: 700; line-height: 0.9;
+      letter-spacing: -2px; margin-top: 20px;
+    }
+    .brand-line { display: block; }             /* cada palabra en su línea */
+    .brand-line.italic { font-style: italic; font-weight: 500; } /* segunda línea en cursiva */
+
+    .brand-meta {
+      font-size: 11px; color: rgba(10, 10, 10, 0.6);
+      letter-spacing: 3px; font-weight: 500; margin-top: 30px; /* stack visible para recruiters */
+    }
+    .dot-divider {
+      display: inline-block; width: 4px; height: 4px;
+      background: var(--ink); border-radius: 50%;
+      margin: 0 8px; vertical-align: middle; /* separador de puntos entre palabras */
+    }
+
+    .left-bottom { font-size: 10px; color: rgba(10, 10, 10, 0.5); letter-spacing: 2px; font-weight: 500; }
+    .left-bottom .number {
+      font-size: 32px; color: var(--ink); font-weight: 800; display: block;
+      font-family: 'Space Grotesk', sans-serif; letter-spacing: -1px; /* número grande de sesiones */
+    }
+
+    .right-panel {
+      padding: 50px 40px;
+      display: flex; flex-direction: column; justify-content: center;
+      background: var(--ink); /* panel oscuro con el formulario */
+    }
+
+    .section-label {
+      font-size: 10px; color: var(--paper-40); letter-spacing: 4px;
+      margin-bottom: 30px; font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-label::before {
+      content: ''; width: 8px; height: 8px;
+      background: var(--paper); display: inline-block; /* cuadrado sólido antes del label */
+    }
+
+    .form-group { margin-bottom: 28px; }
+
+    .terminal-label {
+      display: block; font-size: 10px; color: rgba(245, 240, 232, 0.5);
+      margin-bottom: 8px; letter-spacing: 3px; font-weight: 500; /* etiqueta uppercase espaciada */
+    }
+
+    .terminal-input {
+      width: 100%; background: transparent; border: none;
+      border-bottom: 1px solid rgba(245, 240, 232, 0.3); /* solo subrayado, sin caja */
+      padding: 8px 0; font-family: 'JetBrains Mono', monospace;
+      font-size: 16px; color: var(--paper); outline: none;
+      transition: all 0.2s ease; letter-spacing: 1px; font-weight: 400;
+    }
+    .terminal-input::placeholder { color: rgba(245, 240, 232, 0.2); } /* placeholder fantasma */
+    .terminal-input:focus { border-bottom-color: var(--paper); }      /* el subrayado se enciende al enfocar */
+
+    .terminal-button {
+      width: 100%; background: var(--paper); border: none;
+      font-family: 'JetBrains Mono', monospace; font-size: 13px;
+      color: var(--ink); cursor: pointer; letter-spacing: 4px;
+      transition: all 0.2s ease; font-weight: 700; margin-top: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; /* botón bloque crema, sin redondear */
+    }
+    .terminal-button:hover {
+      background: var(--ink); color: var(--paper);
+      outline: 1px solid var(--paper); /* hover invertido con contorno */
+    }
+    .terminal-button .arrow { font-size: 18px; font-weight: 400; } /* flecha del botón */
+
+    .status-text {
+      text-align: left; font-size: 11px; color: rgba(245, 240, 232, 0.5);
+      margin-top: 24px; min-height: 16px; letter-spacing: 2px; font-weight: 500;
+    }
+    .status-text::before { content: '> '; color: var(--paper-40); } /* prefijo de prompt */
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-8px); }
+      40% { transform: translateX(8px); }
+      60% { transform: translateX(-6px); }
+      80% { transform: translateX(6px); } /* sacudida al fallar la entrada */
+    }
+
+    /* ══ PANTALLA DE CHAT (mismo lenguaje visual) ═══════════════════════ */
+    #chat-scene { display: none; height: 100vh; flex-direction: column; position: relative; z-index: 10; } /* oculta hasta conectar */
+    #chat-scene.active { display: flex; } /* estado visible */
+
+    /* barra superior */
+    #chat-topbar {
+      border-bottom: 1px solid var(--paper-15);
+      padding: 16px 30px;
+      display: flex; align-items: baseline; gap: 20px;
+      background: var(--ink);
+    }
+    #chat-topbar .brand-small {
+      font-family: 'Space Grotesk', sans-serif; font-weight: 700;
+      font-size: 20px; letter-spacing: -0.5px; /* marca compacta en el chat */
+    }
+    #chat-topbar .brand-small .italic { font-style: italic; font-weight: 500; }
+    #chat-topbar .meta { font-size: 10px; color: var(--paper-40); letter-spacing: 3px; font-weight: 500; }
+    #chat-topbar .right { margin-left: auto; display: flex; gap: 24px; align-items: baseline; }
+    #user-tag {
+      background: var(--paper); color: var(--ink);
+      padding: 3px 10px; font-size: 10px; font-weight: 700; letter-spacing: 2px; /* chip invertido con el @nombre */
+    }
+    #clock { font-size: 10px; color: var(--paper-40); letter-spacing: 2px; } /* reloj vivo en el chat */
+
+    /* log de mensajes */
+    #messages {
+      flex: 1; overflow-y: auto; padding: 24px 30px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .row { display: flex; gap: 16px; align-items: baseline; } /* una fila por mensaje */
+    .row .ts { font-size: 10px; color: var(--paper-40); letter-spacing: 1px; flex-shrink: 0; width: 42px; } /* timestamp fijo */
+    .row .who {
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      flex-shrink: 0; min-width: 110px; text-transform: uppercase; /* remitente uppercase brutalist */
+    }
+    .row .who.me { background: var(--paper); color: var(--ink); padding: 2px 8px; text-align: center; } /* yo: chip invertido */
+    .row .who.other { color: var(--paper); border-bottom: 2px solid var(--paper); padding-bottom: 1px; text-align: center; } /* otros: subrayado grueso */
+    .row .who.srv { color: var(--ok); border-bottom: 2px solid var(--ok); padding-bottom: 1px; text-align: center; } /* server: verde */
+    .row .txt { font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; min-width: 0; } /* contenido */
+    .row.sys { color: var(--paper-40); }                       /* eventos de sistema atenuados */
+    .row.sys .txt { font-size: 11px; letter-spacing: 2px; }    /* sistema en letra pequeña espaciada */
+    .row.sys .txt::before { content: '// '; }                  /* prefijo de comentario de código */
+    .row.srvout .txt {
+      background: var(--paper); color: var(--ink);
+      padding: 10px 14px; font-size: 12.5px;
+      white-space: pre-wrap; display: inline-block; /* respuesta del server: bloque invertido tipo "papel impreso" */
+    }
+
+    /* línea de entrada */
+    #input-area {
+      border-top: 1px solid var(--paper-15);
+      padding: 20px 30px; background: var(--ink);
+      display: flex; align-items: baseline; gap: 16px;
+    }
+    #input-label { font-size: 10px; color: rgba(245, 240, 232, 0.5); letter-spacing: 3px; font-weight: 500; flex-shrink: 0; } /* etiqueta MESSAGE */
+    #message-input {
+      flex: 1; background: transparent; border: none;
+      border-bottom: 1px solid rgba(245, 240, 232, 0.3);
+      padding: 8px 0; font-family: 'JetBrains Mono', monospace;
+      font-size: 14px; color: var(--paper); outline: none;
+      transition: all 0.2s ease; letter-spacing: 1px; /* mismo input subrayado del login */
+    }
+    #message-input:focus { border-bottom-color: var(--paper); } /* subrayado encendido */
+    #message-input:disabled { opacity: 0.3; }                    /* atenuado offline */
+    #message-input::placeholder { color: rgba(245, 240, 232, 0.2); }
+    #send-btn {
+      background: var(--paper); border: none; color: var(--ink);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      font-weight: 700; letter-spacing: 3px; padding: 10px 18px;
+      cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; /* botón bloque como en el login */
+    }
+    #send-btn:hover:not(:disabled) { background: var(--ink); color: var(--paper); outline: 1px solid var(--paper); } /* hover invertido */
+    #send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* barra inferior con estado y comandos */
+    #chat-bottombar {
+      border-top: 1px solid var(--paper-15);
+      padding: 12px 30px; background: var(--ink);
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 10px; color: var(--paper-40); letter-spacing: 3px; font-weight: 500;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .live-indicator { display: flex; align-items: center; gap: 8px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; animation: live-pulse 1.5s ease-in-out infinite; } /* punto pulsante */
+    .live-dot.connected { background: var(--ok); }       /* verde conectado */
+    .live-dot.connecting { background: var(--warn); }    /* ámbar reconectando */
+    .live-dot.disconnected { background: var(--err); animation: none; } /* rojo fijo desconectado */
+    @keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .cmds { display: flex; gap: 20px; flex-wrap: wrap; }
+    .cmd { cursor: pointer; transition: color 0.2s ease; }
+    .cmd:hover { color: var(--paper); } /* comando se enciende al pasar el mouse */
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--paper-15); } /* plano, sin redondear */
+
+    /* responsive */
+    @media (max-width: 700px) {
+      .terminal-container { grid-template-columns: 1fr; min-height: auto; } /* login en una columna */
+      .left-panel { border-right: none; border-bottom: 1px solid var(--paper-15); padding: 30px 25px; }
+      .right-panel { padding: 30px 25px; }
+      .brand { font-size: 38px; }
+      .corner-info { font-size: 9px; }
+      .corner-info.tl { top: 15px; left: 15px; }
+      .corner-info.tr { top: 15px; right: 15px; }
+      .corner-info.bl { bottom: 15px; left: 15px; }
+      .corner-info.br { bottom: 15px; right: 15px; }
+      .row .who { min-width: 80px; }
+      #chat-topbar, #messages, #input-area, #chat-bottombar { padding-left: 16px; padding-right: 16px; } /* menos padding en móvil */
+    }
   </style>
 </head>
 <body>
+<div class="bg-grid"></div>       <!-- rejilla de fondo, siempre visible -->
 
-<!-- ══ LOGIN SCREEN ══════════════════════════════════════════════ -->
-<div id="login-screen"> <!-- shown on page load, hidden after connect -->
-  <div class="login-box">
-    <h1>Erisk Chat</h1> <!-- app title -->
-    <p>WebSocket Chat Bot</p> <!-- subtitle -->
-    <input
-      type="text"
-      id="username-input"
-      placeholder="Enter your name…"
-      maxlength="32"
-      autocomplete="off"
-    /> <!-- name field passed as ?name= query parameter to the server -->
-    <button id="connect-btn">Connect</button> <!-- triggers WebSocket connection -->
+<!-- ══ ESCENA DE LOGIN ══════════════════════════════════════════ -->
+<div id="login-scene"> <!-- visible al cargar, se oculta tras conectar -->
+
+  <div class="corner-info tl">SYS // 01<br>rikroig.dev</div>     <!-- esquina: marca -->
+  <div class="corner-info tr">WEBSOCKET<br>SPRING BOOT</div>      <!-- esquina: stack visible -->
+  <div class="corner-info bl">LAT 47.376<br>LON 8.541</div>       <!-- esquina: coordenadas de Zürich -->
+  <div class="corner-info br">--:--:--<br>UTC+1</div>             <!-- esquina: reloj vivo (JS) -->
+
+  <div class="terminal-container" id="loginBox">
+    <div class="left-panel">
+      <div>
+        <div style="font-size: 10px; letter-spacing: 4px; font-weight: 700; margin-bottom: 4px;">// 004</div> <!-- número de proyecto en tu portfolio -->
+        <h1 class="brand">
+          <span class="brand-line">rikroig</span>          <!-- tu marca -->
+          <span class="brand-line italic">chat.</span>     <!-- el producto -->
+        </h1>
+        <div class="brand-meta">
+          JAVA<span class="dot-divider"></span>WEBSOCKET<span class="dot-divider"></span>LIVE <!-- stack en el panel crema -->
+        </div>
+      </div>
+
+      <div class="left-bottom">
+        ONLINE CLIENTS
+        <span class="number" id="client-count">—</span>    <!-- se llena con el SessionInfo periódico del server -->
+        RIGHT NOW
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="section-label">IDENTIFY</div>            <!-- solo nombre — el server no pide password -->
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label class="terminal-label" for="username-input">USERNAME</label>
+          <input
+                  type="text"
+                  class="terminal-input"
+                  id="username-input"
+                  placeholder="dein name"
+                  maxlength="32"
+                  autocomplete="off"
+          > <!-- el nombre viaja como ?name= al servidor -->
+        </div>
+
+        <button type="submit" class="terminal-button">
+          <span>CONNECT</span>
+          <span class="arrow">→</span>
+        </button>
+
+        <div class="status-text" id="login-status">awaiting input</div> <!-- estado del login -->
+      </form>
+    </div>
   </div>
 </div>
 
-<!-- ══ CHAT SCREEN ═══════════════════════════════════════════════ -->
-<div id="chat-screen"> <!-- main chat UI, hidden until connected -->
+<!-- ══ ESCENA DE CHAT ═══════════════════════════════════════════ -->
+<div id="chat-scene"> <!-- UI principal, oculta hasta conectar -->
 
-  <!-- ── Sidebar ──────────────────────────────────────── -->
-  <div id="sidebar">
-    <div id="sidebar-title">Erisk Chat</div> <!-- branding -->
-
-    <!-- connection status indicator -->
-    <div id="status-bar">
-      <div id="status-dot" class="disconnected"></div> <!-- colored dot: green/orange/red -->
-      <span id="status-text">Disconnected</span> <!-- human-readable state -->
-    </div>
-
-    <!-- bot command reference (read from InfoCommand.java + MathCommand.java) -->
-    <div id="commands-panel">
-      <div id="commands-title">Bot Commands</div>
-
-      <!-- @server info → InfoCommand.execute(clientName, sessionId) -->
-      <div class="cmd-card" data-cmd="@server info">
-        <code>@server info</code>
-        <span>Returns your display name and session ID</span>
-      </div>
-
-      <!-- @server math → MathCommand.execute(expression), left-to-right, no precedence -->
-      <div class="cmd-card" data-cmd="@server math ">
-        <code>@server math &lt;expr&gt;</code>
-        <span>Evaluates math left-to-right (no precedence).<br/>
-          e.g. 2+3, 10/2, 5*3-1</span>
-      </div>
-    </div>
+  <!-- barra superior -->
+  <div id="chat-topbar">
+    <span class="brand-small">rikroig <span class="italic">chat.</span></span> <!-- marca compacta -->
+    <span class="meta">// CHAT ROOM</span>                                     <!-- etiqueta de sala -->
+    <span class="right">
+      <span id="user-tag"></span>   <!-- chip invertido con @nombre -->
+      <span id="clock">--:--:--</span> <!-- reloj vivo -->
+    </span>
   </div>
 
-  <!-- ── Main chat area ─────────────────────────────── -->
-  <div id="main-chat">
+  <div id="messages"></div> <!-- las filas de mensajes se agregan aquí dinámicamente -->
 
-    <div id="chat-header">
-      <h2>Chat Room</h2> <!-- room label -->
-      <span id="username-display"></span> <!-- shows "@yourname" after login -->
+  <!-- línea de entrada -->
+  <div id="input-area">
+    <span id="input-label">MESSAGE</span> <!-- etiqueta del campo -->
+    <input type="text" id="message-input" placeholder="nachricht oder @server befehl…" autocomplete="off" disabled /> <!-- deshabilitado hasta que el WebSocket esté OPEN -->
+    <button id="send-btn" disabled>SEND →</button> <!-- botón bloque -->
+  </div>
+
+  <!-- barra inferior: estado + comandos del bot (InfoCommand.java + MathCommand.java) -->
+  <div id="chat-bottombar">
+    <div class="live-indicator">
+      <div class="live-dot disconnected" id="live-dot"></div> <!-- punto de estado -->
+      <span id="status-text">OFFLINE</span>                    <!-- texto de estado -->
     </div>
-
-    <div id="messages"></div> <!-- message bubbles appended here dynamically -->
-
-    <div id="input-area">
-      <input
-        type="text"
-        id="message-input"
-        placeholder="Type a message or @server command…"
-        autocomplete="off"
-        disabled
-      /> <!-- disabled until WebSocket is OPEN -->
-      <button id="send-btn" disabled>Send</button> <!-- disabled until connected -->
+    <div class="cmds">
+      <span class="cmd" data-cmd="@server info">@SERVER INFO</span>            <!-- comando clicable 1 -->
+      <span class="cmd" data-cmd="@server math ">@SERVER MATH &lt;EXPR&gt;</span> <!-- comando clicable 2 -->
+      <span>ENTER = SEND</span>                                                <!-- pista de teclado -->
     </div>
   </div>
 </div>
+
+<div class="noise-overlay"></div> <!-- grano por encima de todo -->
 
 <script>
-  // ── DOM references ──────────────────────────────────────────────────────
-  const loginScreen   = document.getElementById('login-screen');   // login page wrapper
-  const chatScreen    = document.getElementById('chat-screen');    // chat page wrapper
-  const usernameInput = document.getElementById('username-input'); // name text field on login
-  const connectBtn    = document.getElementById('connect-btn');    // connect button on login
-  const statusDot     = document.getElementById('status-dot');     // colored connection indicator
-  const statusText    = document.getElementById('status-text');    // status label text
-  const messagesEl    = document.getElementById('messages');       // message list container
-  const messageInput  = document.getElementById('message-input'); // message compose field
-  const sendBtn       = document.getElementById('send-btn');       // send button
-  const userDisplay   = document.getElementById('username-display'); // "@name" label in header
-  const cmdCards      = document.querySelectorAll('.cmd-card');    // sidebar command shortcut cards
+  // ── Referencias del DOM ──────────────────────────────────────────────────
+  const loginScene    = document.getElementById('login-scene');    // escena de login
+  const chatScene     = document.getElementById('chat-scene');     // escena de chat
+  const loginBox      = document.getElementById('loginBox');       // contenedor del panel dividido (para shake)
+  const loginForm     = document.getElementById('loginForm');      // formulario de login
+  const loginStatus   = document.getElementById('login-status');   // texto "> awaiting input"
+  const usernameInput = document.getElementById('username-input'); // campo USERNAME
+  const clientCount   = document.getElementById('client-count');   // número grande del panel crema
+  const messagesEl    = document.getElementById('messages');       // contenedor del log
+  const messageInput  = document.getElementById('message-input');  // campo MESSAGE
+  const sendBtn       = document.getElementById('send-btn');       // botón SEND
+  const userTag       = document.getElementById('user-tag');       // chip @nombre
+  const liveDot       = document.getElementById('live-dot');       // punto de estado
+  const statusTextEl  = document.getElementById('status-text');    // texto ONLINE/OFFLINE
+  const cmdSpans      = document.querySelectorAll('.cmd');         // comandos clicables
 
-  // ── Application state ───────────────────────────────────────────────────
-  let ws          = null;  // active WebSocket instance
-  let username    = '';    // current user's display name (sent as ?name= to server)
-  let retryDelay  = 1000; // current reconnect wait in ms (grows with backoff)
-  let retryTimer  = null; // handle for the pending setTimeout reconnect
-  let intentional = false; // true when the user explicitly disconnects (future use)
+  // ── Estado de la aplicación ──────────────────────────────────────────────
+  let ws          = null;  // instancia activa del WebSocket
+  let username    = '';    // nombre visible del usuario (se envía como ?name= al servidor)
+  let retryDelay  = 1000;  // espera actual de reconexión en ms (crece con backoff)
+  let retryTimer  = null;  // handle del setTimeout de reconexión pendiente
+  let intentional = false; // true cuando el usuario se desconecta a propósito (uso futuro)
 
-  // ── Helpers ─────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────
 
-  // Builds the WebSocket URL using the same host as the page, choosing wss:// on HTTPS
+  // Construye la URL del WebSocket usando el mismo host de la página, con wss:// en HTTPS
   function buildWsUrl(name) {
-    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; // match page security scheme
-    return `${proto}//${window.location.host}/ws?name=${encodeURIComponent(name)}`; // server reads ?name= in afterConnectionEstablished
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'; // coincide con el esquema de la página
+    return `${proto}//${window.location.host}/ws?name=${encodeURIComponent(name)}`; // el servidor lee ?name= en afterConnectionEstablished
   }
 
-  // Updates the status dot CSS class and label text
+  // Actualiza el punto y el texto de estado de la barra inferior
   function setStatus(cssClass, label) {
-    statusDot.className = cssClass;    // swap color class: connected | connecting | disconnected
-    statusText.textContent = label;   // visible text beside the dot
+    liveDot.className = `live-dot ${cssClass}`; // connected | connecting | disconnected
+    statusTextEl.textContent = label;           // texto uppercase visible
   }
 
-  // Appends a message bubble to the chat area and scrolls to the bottom
-  function addMessage(cssType, sender, text) {
-    const bubble = document.createElement('div'); // outer bubble element
-    bubble.className = `msg ${cssType}`;          // css type: incoming | outgoing | system | server-info
-
-    if (cssType !== 'system') { // system messages have no sender header
-      const hdr = document.createElement('div'); // sender label row
-      hdr.className = 'msg-header';
-      hdr.textContent = sender;                  // display name or "server"
-      bubble.appendChild(hdr);
-    }
-
-    if (cssType === 'server-info') {
-      const pre = document.createElement('pre'); // monospace block for server responses
-      pre.textContent = text;
-      bubble.appendChild(pre);
-    } else {
-      const p = document.createElement('p');     // plain paragraph for chat text
-      p.textContent = text;
-      bubble.appendChild(p);
-    }
-
-    messagesEl.appendChild(bubble);
-    messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll to newest message
+  // Devuelve la hora actual como HH:MM para el timestamp de cada fila
+  function nowHHMM() {
+    return new Date().toTimeString().slice(0, 5); // recorta "HH:MM" de la hora local
   }
 
-  // Constructs the JSON payload the server expects (Message.java schema)
+  // Agrega una fila de mensaje al log y hace scroll hasta abajo
+  // kind: 'me' | 'other' | 'srv' | 'sys' | 'srvout'
+  function addLine(kind, sender, text) {
+    const row = document.createElement('div');   // fila del log
+    row.className = 'row' + (kind === 'sys' ? ' sys' : '') + (kind === 'srvout' ? ' srvout' : ''); // clases según tipo
+
+    const ts = document.createElement('span');   // columna de timestamp
+    ts.className = 'ts';
+    ts.textContent = nowHHMM();
+    row.appendChild(ts);
+
+    if (kind !== 'sys') {                        // los eventos de sistema no llevan remitente
+      const who = document.createElement('span'); // columna del remitente
+      who.className = 'who ' + (kind === 'me' ? 'me' : (kind === 'srv' || kind === 'srvout') ? 'srv' : 'other');
+      who.textContent = sender;                  // el CSS lo pone en uppercase
+      row.appendChild(who);
+    }
+
+    const txt = document.createElement('span');  // columna del contenido
+    txt.className = 'txt';
+    txt.textContent = text;                      // textContent = a prueba de inyección HTML
+    row.appendChild(txt);
+
+    messagesEl.appendChild(row);
+    messagesEl.scrollTop = messagesEl.scrollHeight; // auto-scroll a la fila más nueva
+  }
+
+  // Construye el payload JSON que espera el servidor (esquema de Message.java)
   function buildPayload(text) {
-    return JSON.stringify({           // serialize full Message object
+    return JSON.stringify({           // serializa el objeto Message completo
       header: {
-        origin:      username,        // MessageHeader.origin — our display name
-        destination: null,            // null = broadcast (no specific recipient)
-        timestamp:   new Date().toISOString(), // MessageHeader.timestamp as ISO-8601 string
-        type:        'Chat'           // MessageType.Chat enum value
+        origin:      username,        // MessageHeader.origin — nuestro nombre visible
+        destination: null,            // null = broadcast (sin destinatario específico)
+        timestamp:   new Date().toISOString(), // MessageHeader.timestamp como string ISO-8601
+        type:        'Chat'           // valor del enum MessageType.Chat
       },
       data: {
-        message: text                 // MessageData.message — the actual text
+        message: text                 // MessageData.message — el texto real
       }
     });
   }
 
-  // Parses and renders an incoming WebSocket frame
+  // Parsea y renderiza un frame entrante del WebSocket
   function handleFrame(raw) {
     let parsed;
     try {
-      parsed = JSON.parse(raw);       // try to parse as Message JSON
+      parsed = JSON.parse(raw);       // intenta parsear como Message JSON
     } catch (_) {
-      addMessage('system', '', raw);  // non-JSON frames shown as system text (shouldn't happen, SynAckMiddleware is disabled)
+      addLine('sys', '', raw);        // frames no-JSON como fila de sistema (no debería pasar, SynAckMiddleware desactivado)
       return;
     }
 
-    const msgType = parsed?.header?.type;          // MessageType: "Chat" or "ServerInfo"
-    const origin  = parsed?.header?.origin ?? 'server'; // sender name from header
-    const text    = parsed?.data?.message ?? '';        // message content from data
+    const msgType = parsed?.header?.type;               // MessageType: "Chat" o "ServerInfo"
+    const origin  = parsed?.header?.origin ?? 'server'; // remitente desde el header
+    const text    = parsed?.data?.message ?? '';        // contenido desde data
 
     if (msgType === 'Chat') {
-      addMessage('incoming', origin, text); // broadcast chat message from another user
+      addLine('other', origin, text); // mensaje broadcast de otro usuario
       return;
     }
 
     if (msgType === 'ServerInfo') {
-      // The server wraps periodic SessionInfo JSON inside data.message (see Websocket.java printMessage())
+      // El servidor envuelve el JSON periódico de SessionInfo dentro de data.message (ver Websocket.java printMessage())
       try {
-        const inner = JSON.parse(text);            // attempt to unwrap inner JSON string
+        const inner = JSON.parse(text);            // intenta desenvolver el string JSON interno
         if (typeof inner.connectedClients === 'number') {
-          addMessage('system', '', `Connected clients: ${inner.connectedClients}`); // periodic session count
+          clientCount.textContent = inner.connectedClients; // actualiza el número grande del login
+          addLine('sys', '', `clients online: ${inner.connectedClients}`); // y lo registra en el log
           return;
         }
       } catch (_) {
-        // data.message is plain text — it's a @server command response
+        // data.message es texto plano — respuesta de comando @server
       }
-      addMessage('server-info', 'server', text);  // @server info / @server math response
+      addLine('srvout', 'server', text);          // respuesta de @server info / @server math en bloque invertido
     }
   }
 
-  // ── WebSocket lifecycle ──────────────────────────────────────────────────
+  // ── Ciclo de vida del WebSocket ──────────────────────────────────────────
 
-  // Opens a new WebSocket connection and registers event handlers
+  // Abre una nueva conexión WebSocket y registra los event handlers
   function connect() {
-    clearTimeout(retryTimer);                          // cancel any pending reconnect timer
-    setStatus('connecting', 'Connecting…');
+    clearTimeout(retryTimer);                          // cancela cualquier reconexión pendiente
+    setStatus('connecting', 'CONNECTING…');
 
-    ws = new WebSocket(buildWsUrl(username));          // open connection; server reads ?name= query param
+    ws = new WebSocket(buildWsUrl(username));          // abre la conexión; el servidor lee ?name=
 
     ws.onopen = () => {
-      retryDelay = 1000;                               // reset exponential backoff counter on success
-      setStatus('connected', `Connected as ${username}`);
-      messageInput.disabled = false;                  // allow typing
-      sendBtn.disabled      = false;                  // allow sending
+      retryDelay = 1000;                               // reinicia el backoff exponencial al conectar
+      setStatus('connected', 'SYSTEM ONLINE');
+      messageInput.disabled = false;                   // permite escribir
+      sendBtn.disabled      = false;                   // permite enviar
       messageInput.focus();
-      addMessage('system', '', 'Connected to server.');
+      addLine('sys', '', `connected as ${username}`);  // evento de sistema
     };
 
     ws.onmessage = (event) => {
-      handleFrame(event.data);                         // dispatch each incoming text frame
+      handleFrame(event.data);                         // despacha cada frame de texto entrante
     };
 
     ws.onclose = () => {
-      messageInput.disabled = true;                   // block input while offline
+      messageInput.disabled = true;                    // bloquea la entrada mientras está offline
       sendBtn.disabled      = true;
-      if (intentional) {                              // clean disconnect (reserved for future disconnect button)
-        setStatus('disconnected', 'Disconnected');
+      if (intentional) {                               // desconexión limpia (reservado para futuro botón)
+        setStatus('disconnected', 'OFFLINE');
         return;
       }
-      // Unexpected close — retry with exponential backoff (max 30 s)
+      // Cierre inesperado — reintenta con backoff exponencial (máx. 30 s)
       const delay = retryDelay;
-      retryDelay  = Math.min(retryDelay * 2, 30000); // double delay, cap at 30 s
-      setStatus('connecting', `Reconnecting in ${delay / 1000}s…`);
-      addMessage('system', '', `Connection lost. Retrying in ${delay / 1000}s…`);
-      retryTimer = setTimeout(connect, delay);         // schedule next attempt
+      retryDelay  = Math.min(retryDelay * 2, 30000);  // duplica la espera, tope en 30 s
+      setStatus('connecting', `RETRY ${delay / 1000}S`);
+      addLine('sys', '', `connection lost — retry in ${delay / 1000}s`);
+      retryTimer = setTimeout(connect, delay);         // programa el siguiente intento
     };
 
     ws.onerror = () => {
-      // onerror always fires before onclose; state is handled in onclose
+      // onerror siempre dispara antes de onclose; el estado se maneja en onclose
     };
   }
 
-  // ── Send message ─────────────────────────────────────────────────────────
+  // ── Envío de mensajes ────────────────────────────────────────────────────
 
   function sendMessage() {
-    const text = messageInput.value.trim();           // read and trim compose field
-    if (!text) return;                                // ignore empty sends
-    if (!ws || ws.readyState !== WebSocket.OPEN) return; // guard: must be connected
+    const text = messageInput.value.trim();            // lee y recorta el campo
+    if (!text) return;                                 // ignora envíos vacíos
+    if (!ws || ws.readyState !== WebSocket.OPEN) return; // guardia: debe estar conectado
 
-    ws.send(buildPayload(text));                      // send JSON Message to server
-    addMessage('outgoing', 'You', text);             // echo locally (server does NOT echo back to sender)
-    messageInput.value = '';                          // clear compose field
+    ws.send(buildPayload(text));                       // envía el Message JSON al servidor
+    addLine('me', username, text);                     // eco local (el servidor NO devuelve el eco al remitente)
+    messageInput.value = '';                           // limpia el campo
   }
 
   // ── Event listeners ──────────────────────────────────────────────────────
 
-  // Clicking a command card pastes its template into the compose field
-  cmdCards.forEach(card => {
-    card.addEventListener('click', () => {
-      messageInput.value = card.dataset.cmd;         // paste command template (may have trailing space for arguments)
+  // Clic en un comando de la barra inferior lo pega en el campo
+  cmdSpans.forEach(span => {
+    span.addEventListener('click', () => {
+      messageInput.value = span.dataset.cmd;           // pega la plantilla (puede llevar espacio final para argumentos)
       messageInput.focus();
     });
   });
 
   messageInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();             // Enter key submits the message
+    if (e.key === 'Enter') sendMessage();              // Enter envía el mensaje
   });
 
-  sendBtn.addEventListener('click', sendMessage);    // click also submits
+  sendBtn.addEventListener('click', sendMessage);      // el clic también envía
 
-  // Login form: read username and open WebSocket
-  function startChat() {
-    const name = usernameInput.value.trim();         // sanitize the name
-    if (!name) { usernameInput.focus(); return; }    // require a non-empty name
+  // Login: validar el nombre, cambiar de escena y abrir el WebSocket
+  loginForm.addEventListener('submit', function (e) {
+    e.preventDefault();                                // evita el submit clásico del form
 
-    username = name;                                 // store globally for message payloads
-    loginScreen.style.display = 'none';             // hide login screen
-    chatScreen.classList.add('active');             // reveal chat screen
-    userDisplay.textContent = `@${username}`;        // show "@name" in the header
-    connect();                                       // open WebSocket connection
+    const name = usernameInput.value.trim();           // sanea el nombre
+    if (!name) {
+      loginStatus.textContent = 'name required';       // mensaje de error
+      loginBox.style.animation = 'shake 0.4s';         // sacudida brutalist
+      setTimeout(() => { loginBox.style.animation = ''; }, 400);        // limpia la animación
+      setTimeout(() => { loginStatus.textContent = 'awaiting input'; }, 2000); // vuelve al estado base
+      return;
+    }
+
+    username = name;                                   // lo guarda globalmente para los payloads
+    loginStatus.textContent = 'establishing connection'; // feedback inmediato
+    loginScene.style.display = 'none';                 // oculta el login
+    chatScene.classList.add('active');                 // revela el chat
+    userTag.textContent = `@${username.toUpperCase()}`; // chip invertido en la topbar
+    connect();                                         // abre la conexión WebSocket
+  });
+
+  // ── Reloj vivo (login y chat comparten la misma hora) ───────────────────
+  function updateClock() {
+    const now = new Date();
+    const hhmmss = now.toTimeString().slice(0, 8);     // "HH:MM:SS" de la hora local
+    const loginClock = document.querySelector('.corner-info.br'); // reloj de la esquina del login
+    if (loginClock) loginClock.innerHTML = hhmmss + '<br>UTC+1';
+    const chatClock = document.getElementById('clock');           // reloj de la topbar del chat
+    if (chatClock) chatClock.textContent = hhmmss;
   }
+  setInterval(updateClock, 1000);                      // actualiza cada segundo
+  updateClock();                                       // y una vez al cargar
 
-  connectBtn.addEventListener('click', startChat);  // button triggers login
-  usernameInput.addEventListener('keydown', e => {
-    if (e.key === 'Enter') startChat();              // Enter on name field also connects
-  });
+  // Foco inicial en el campo de nombre
+  setTimeout(() => { usernameInput.focus(); }, 300);   // pequeño delay para que la fuente cargue
 </script>
 </body>
 </html>
